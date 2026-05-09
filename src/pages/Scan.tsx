@@ -24,6 +24,7 @@ export default function Scan() {
 
   const [stage, setStage] = useState<RevealStage>("idle");
   const [pulseWaveAt, setPulseWaveAt] = useState<number | undefined>();
+  const [now, setNow] = useState<number>(() => Date.now());
   const firedRef = useRef(false);
 
   // Trigger the reveal sequence once when status flips to "done".
@@ -43,6 +44,13 @@ export default function Scan() {
     return () => timers.forEach(clearTimeout);
   }, [scan?.status]);
 
+  // Tick elapsed counter while scan is still running (avoid Date.now() in render).
+  useEffect(() => {
+    if (!scan || scan.finishedAt) return;
+    const interval = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(interval);
+  }, [scan]);
+
   const ranked = scan?.status === "done";
 
   const topFinding = useMemo<FindingRow | null>(() => {
@@ -59,7 +67,7 @@ export default function Scan() {
 
   const elapsed = scan.finishedAt
     ? Math.round((scan.finishedAt - scan.startedAt) / 1000)
-    : Math.round((Date.now() - scan.startedAt) / 1000);
+    : Math.round((now - scan.startedAt) / 1000);
 
   const pct = scan.totalAgents > 0 ? Math.round((scan.completedAgents / scan.totalAgents) * 100) : 0;
 
