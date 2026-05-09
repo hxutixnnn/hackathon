@@ -57,9 +57,16 @@ export const bumpProgress = internalMutation({
     if (!scan) return;
     const completed = scan.completedAgents + 1;
     await ctx.db.patch(scanId, { completedAgents: completed });
-    if (completed >= scan.totalAgents && scan.totalAgents > 0) {
-      await ctx.db.patch(scanId, { status: "reducing" });
-      await ctx.scheduler.runAfter(0, internal.reducer.run, { scanId });
+    if (
+      completed >= scan.totalAgents &&
+      scan.totalAgents > 0 &&
+      !scan.dedupStartedAt
+    ) {
+      await ctx.db.patch(scanId, {
+        status: "reducing",
+        dedupStartedAt: Date.now(),
+      });
+      await ctx.scheduler.runAfter(0, internal.dedup.run, { scanId });
     }
   },
 });
