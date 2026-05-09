@@ -11,6 +11,7 @@ import TopFindingCard from "../components/TopFindingCard";
 import SeveritySparkline from "../components/SeveritySparkline";
 import { useActiveAngle } from "../lib/useActiveAngle";
 import { StatsBar } from "../components/StatsBar";
+import { BenchmarkPanel } from "../components/BenchmarkPanel";
 
 type RevealStage = "idle" | "settle" | "hero" | "sparkline" | "table" | "wave" | "done";
 
@@ -20,6 +21,7 @@ export default function Scan() {
 
   const scan = useQuery(api.scans.get, { scanId });
   const findings = useQuery(api.findings.byScan, { scanId });
+  const benchmark = useQuery(api.eval.benchmarkByScan, { scanId });
   const summaries = (useQuery(api.findings.angleSummaries, { scanId }) ?? []) as AngleSummary[];
   const activeAngle = useActiveAngle(summaries);
 
@@ -103,6 +105,8 @@ export default function Scan() {
           }
         />
 
+        <BenchmarkPanel benchmark={benchmark} />
+
         <div className="relative bg-slate-950 border border-slate-900 rounded-xl p-4" style={{ height: 520 }}>
           <Constellation
             mode="live"
@@ -165,6 +169,7 @@ export default function Scan() {
             findings={(findings ?? []) as FindingRow[]}
             ranked={ranked && stageReached(stage, "table")}
             pulseWaveAt={pulseWaveAt}
+            matchedFindingIds={benchmark?.matchedFindingIds as string[] | undefined}
           />
         </div>
       </div>

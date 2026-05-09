@@ -21,15 +21,19 @@ export default function FindingsTable({
   findings,
   ranked,
   pulseWaveAt,
+  matchedFindingIds,
 }: {
   findings: FindingRow[];
   ranked: boolean;
   /** Timestamp (ms) at which to play the badge pulse wave; pass Date.now() once. */
   pulseWaveAt?: number;
+  matchedFindingIds?: string[];
 }) {
   const [expanded, setExpanded] = useState<string | null>(null);
   const [waveActive, setWaveActive] = useState(false);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const matched = new Set(matchedFindingIds ?? []);
 
   const visible = ranked
     ? findings.filter((f) => f.reducerKept !== false).sort((a, b) => (a.reducerRank ?? 999) - (b.reducerRank ?? 999))
@@ -84,6 +88,12 @@ export default function FindingsTable({
                 severity={f.reducerSeverity ?? f.severity}
                 pulse={waveActive}
               />
+              {matched.has(f._id) && (
+                <span
+                  className="mt-2 inline-block h-2 w-2 rounded-full bg-emerald-400 shrink-0"
+                  title="matches juice-shop ground truth"
+                />
+              )}
               <div className="flex-1 min-w-0">
                 <div className="font-medium truncate">{f.title}</div>
                 <div className="text-xs text-slate-500 font-mono mt-1">
