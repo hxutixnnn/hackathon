@@ -4,7 +4,8 @@ import { useQuery } from "convex/react";
 import { motion, AnimatePresence } from "framer-motion";
 import { api } from "../../convex/_generated/api";
 import type { Id } from "../../convex/_generated/dataModel";
-import Constellation, { type AngleSummary } from "../components/Constellation";
+import Constellation from "../components/Constellation";
+import type { AngleSummary } from "../lib/nodeStyle";
 import FindingsTable, { type FindingRow } from "../components/FindingsTable";
 import TopFindingCard from "../components/TopFindingCard";
 import SeveritySparkline from "../components/SeveritySparkline";
@@ -46,9 +47,10 @@ export default function Scan() {
 
   const topFinding = useMemo<FindingRow | null>(() => {
     if (!findings || !ranked) return null;
-    const kept = findings.filter((f: any) => f.reducerKept !== false);
+    const kept = findings.filter((f) => f.reducerKept !== false);
     if (kept.length === 0) return null;
-    return [...kept].sort((a: any, b: any) => (a.reducerRank ?? 999) - (b.reducerRank ?? 999))[0] as any;
+    const sorted = [...kept].sort((a, b) => (a.reducerRank ?? 999) - (b.reducerRank ?? 999));
+    return sorted[0] ?? null;
   }, [findings, ranked]);
 
   if (!scan) {
@@ -130,7 +132,7 @@ export default function Scan() {
         </AnimatePresence>
 
         {ranked && stageReached(stage, "sparkline") && findings && (
-          <SeveritySparkline findings={findings as any} />
+          <SeveritySparkline findings={findings as FindingRow[]} />
         )}
 
         <div>
@@ -138,7 +140,7 @@ export default function Scan() {
             Findings {ranked && <span className="text-emerald-400">· ranked</span>}
           </h2>
           <FindingsTable
-            findings={(findings ?? []) as any}
+            findings={(findings ?? []) as FindingRow[]}
             ranked={ranked && stageReached(stage, "table")}
             pulseWaveAt={pulseWaveAt}
           />

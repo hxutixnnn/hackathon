@@ -1,12 +1,6 @@
 import { ANGLES } from "../lib/angles";
-import { SEVERITY_HEX, severityTier, type SeverityTier } from "../lib/severity";
-
-export type AngleSummary = {
-  angle: string;
-  count: number;
-  maxSeverity: number;
-  latestAt: number;
-};
+import { SEVERITY_HEX } from "../lib/severity";
+import { nodeStyleFor, type AngleSummary } from "../lib/nodeStyle";
 
 type IdleProps = {
   mode: "idle";
@@ -147,14 +141,3 @@ export default function Constellation(props: ConstellationProps) {
   );
 }
 
-// Helper exported for Task 6 — derive node radius and color from a summary.
-export function nodeStyleFor(
-  summary: AngleSummary | undefined,
-): { radius: number; tier: SeverityTier; fill: string } {
-  if (!summary || summary.count === 0) {
-    return { radius: 8, tier: "idle", fill: SEVERITY_HEX.idle };
-  }
-  const radius = 8 + Math.min(summary.count * 1.2, 16);
-  const tier = severityTier(summary.maxSeverity);
-  return { radius, tier, fill: SEVERITY_HEX[tier] };
-}

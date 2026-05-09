@@ -18,8 +18,9 @@ export default function Home() {
       const scanId = await start({ repoUrl: url.trim() });
       // Allow the fade-out animation to play before navigating.
       setTimeout(() => navigate(`/scan/${scanId}`), 220);
-    } catch (e: any) {
-      alert(e?.message ?? "Failed to start");
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : "Failed to start";
+      alert(message);
       setBusy(false);
     }
   };

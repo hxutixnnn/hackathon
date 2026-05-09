@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import type { AngleSummary } from "../components/Constellation";
+import type { AngleSummary } from "./nodeStyle";
 
 const DEBOUNCE_MS = 200;
 const ACTIVE_WINDOW_MS = 1500;

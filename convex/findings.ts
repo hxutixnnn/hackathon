@@ -73,22 +73,31 @@ export const applyReducer = internalMutation({
   handler: async (ctx, { consolidated, discardedIds }) => {
     for (const id of discardedIds) {
       try {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         await ctx.db.patch(id as any, { reducerKept: false });
-      } catch {}
+      } catch {
+        // Ignore patch failures
+      }
     }
     for (const c of consolidated) {
       const [primary, ...rest] = c.rawIds;
       try {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         await ctx.db.patch(primary as any, {
           reducerKept: true,
           reducerSeverity: c.severity,
           reducerRank: c.rank,
         });
-      } catch {}
+      } catch {
+        // Ignore patch failures
+      }
       for (const id of rest) {
         try {
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
           await ctx.db.patch(id as any, { reducerKept: false });
-        } catch {}
+        } catch {
+          // Ignore patch failures
+        }
       }
     }
   },
