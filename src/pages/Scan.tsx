@@ -10,6 +10,7 @@ import FindingsTable, { type FindingRow } from "../components/FindingsTable";
 import TopFindingCard from "../components/TopFindingCard";
 import SeveritySparkline from "../components/SeveritySparkline";
 import { useActiveAngle } from "../lib/useActiveAngle";
+import RemediationDrawer from "../components/RemediationDrawer";
 
 type RevealStage = "idle" | "settle" | "hero" | "sparkline" | "table" | "wave" | "done";
 
@@ -20,11 +21,13 @@ export default function Scan() {
   const scan = useQuery(api.scans.get, { scanId });
   const findings = useQuery(api.findings.byScan, { scanId });
   const summaries = (useQuery(api.findings.angleSummaries, { scanId }) ?? []) as AngleSummary[];
+  const topIds = useQuery(api.studio.topThreeFindingIds, { scanId });
   const activeAngle = useActiveAngle(summaries);
 
   const [stage, setStage] = useState<RevealStage>("idle");
   const [pulseWaveAt, setPulseWaveAt] = useState<number | undefined>();
   const [now, setNow] = useState<number>(() => Date.now());
+  const [selectedFinding, setSelectedFinding] = useState<FindingRow | null>(null);
   const firedRef = useRef(false);
 
   // Trigger the reveal sequence once when status flips to "done".
@@ -62,6 +65,11 @@ export default function Scan() {
     const sorted = [...kept].sort((a, b) => (a.reducerRank ?? 999) - (b.reducerRank ?? 999));
     return sorted[0] ?? null;
   }, [findings, ranked]);
+
+  const topSet = useMemo(
+    () => new Set((topIds ?? []) as string[]),
+    [topIds],
+  );
 
   if (!scan) {
     return <div className="min-h-screen bg-slate-950 text-slate-100 p-8">Loading…</div>;
@@ -153,9 +161,15 @@ export default function Scan() {
             findings={(findings ?? []) as FindingRow[]}
             ranked={ranked && stageReached(stage, "table")}
             pulseWaveAt={pulseWaveAt}
+            onSelect={setSelectedFinding}
+            topThreeIds={topSet}
           />
         </div>
       </div>
+      <RemediationDrawer
+        finding={selectedFinding as Parameters<typeof RemediationDrawer>[0]["finding"]}
+        onClose={() => setSelectedFinding(null)}
+      />
     </motion.div>
   );
 }
