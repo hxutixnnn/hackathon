@@ -1,5 +1,6 @@
 import { v } from "convex/values";
-import { internalMutation, internalQuery, query } from "./_generated/server";
+import { action, internalMutation, internalQuery, query } from "./_generated/server";
+import { internal } from "./_generated/api";
 
 const KIND = v.union(v.literal("explain"), v.literal("prove"), v.literal("fix"));
 
@@ -123,5 +124,35 @@ export const getFinding = internalQuery({
       repoUrl: scan?.repoUrl,
       clonedSha: scan?.clonedSha,
     };
+  },
+});
+
+const KIND_TO_ACTION = {
+  explain: internal.studio_actions.generateExplain,
+  prove: internal.studio_actions.generateProve,
+  fix: internal.studio_actions.generateFix,
+} as const;
+
+export const ensure = action({
+  args: {
+    findingId: v.id("findings"),
+    kind: KIND,
+  },
+  handler: async (ctx, { findingId, kind }): Promise<void> => {
+    const existing = await ctx.runQuery(internal.studio.getRemediation, { findingId, kind });
+    if (existing && (existing.status === "done" || existing.status === "running")) {
+      return;
+    }
+    await ctx.scheduler.runAfter(0, KIND_TO_ACTION[kind], { findingId });
+  },
+});
+
+export const getRemediation = internalQuery({
+  args: { findingId: v.id("findings"), kind: KIND },
+  handler: async (ctx, { findingId, kind }) => {
+    return await ctx.db
+      .query("remediations")
+      .withIndex("by_finding_kind", (q) => q.eq("findingId", findingId).eq("kind", kind))
+      .first();
   },
 });
