@@ -1,11 +1,16 @@
+import { useEffect, useState, useMemo } from "react";
 import { useParams } from "react-router-dom";
 import { useQuery } from "convex/react";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import { api } from "../../convex/_generated/api";
 import type { Id } from "../../convex/_generated/dataModel";
 import Constellation, { type AngleSummary } from "../components/Constellation";
-import FindingsTable from "../components/FindingsTable";
+import FindingsTable, { type FindingRow } from "../components/FindingsTable";
+import TopFindingCard from "../components/TopFindingCard";
+import SeveritySparkline from "../components/SeveritySparkline";
 import { useActiveAngle } from "../lib/useActiveAngle";
+
+type RevealStage = "idle" | "settle" | "hero" | "sparkline" | "table" | "wave" | "done";
 
 export default function Scan() {
   const { id } = useParams<{ id: string }>();
@@ -16,6 +21,35 @@ export default function Scan() {
   const summaries = (useQuery(api.findings.angleSummaries, { scanId }) ?? []) as AngleSummary[];
   const activeAngle = useActiveAngle(summaries);
 
+  const [stage, setStage] = useState<RevealStage>("idle");
+  const [pulseWaveAt, setPulseWaveAt] = useState<number | undefined>();
+
+  // Trigger the reveal sequence once when status flips to "done".
+  useEffect(() => {
+    if (scan?.status !== "done") return;
+    if (stage !== "idle") return;
+    const timers: ReturnType<typeof setTimeout>[] = [];
+    setStage("settle");
+    timers.push(setTimeout(() => setStage("hero"), 300));
+    timers.push(setTimeout(() => setStage("sparkline"), 550));
+    timers.push(setTimeout(() => setStage("table"), 950));
+    timers.push(setTimeout(() => {
+      setStage("wave");
+      setPulseWaveAt(Date.now());
+    }, 1450));
+    timers.push(setTimeout(() => setStage("done"), 2100));
+    return () => timers.forEach(clearTimeout);
+  }, [scan?.status, stage]);
+
+  const ranked = scan?.status === "done";
+
+  const topFinding = useMemo<FindingRow | null>(() => {
+    if (!findings || !ranked) return null;
+    const kept = findings.filter((f: any) => f.reducerKept !== false);
+    if (kept.length === 0) return null;
+    return [...kept].sort((a: any, b: any) => (a.reducerRank ?? 999) - (b.reducerRank ?? 999))[0] as any;
+  }, [findings, ranked]);
+
   if (!scan) {
     return <div className="min-h-screen bg-slate-950 text-slate-100 p-8">Loading…</div>;
   }
@@ -25,7 +59,6 @@ export default function Scan() {
     : Math.round((Date.now() - scan.startedAt) / 1000);
 
   const pct = scan.totalAgents > 0 ? Math.round((scan.completedAgents / scan.totalAgents) * 100) : 0;
-  const ranked = scan.status === "done";
 
   return (
     <motion.div
@@ -45,13 +78,33 @@ export default function Scan() {
           </div>
         </div>
 
-        <div className="bg-slate-950 border border-slate-900 rounded-xl p-4" style={{ height: 520 }}>
+        <div className="relative bg-slate-950 border border-slate-900 rounded-xl p-4" style={{ height: 520 }}>
           <Constellation
             mode="live"
             summaries={summaries}
             centerLabel={`${scan.completedAgents} / ${scan.totalAgents || "?"}`}
-            activeAngle={activeAngle}
+            activeAngle={ranked ? null : activeAngle}
           />
+          {/* settle sweep — one outward radial fade when reveal starts */}
+          <AnimatePresence>
+            {stage === "settle" && (
+              <motion.div
+                key="sweep"
+                className="pointer-events-none absolute inset-0 flex items-center justify-center"
+                initial={{ opacity: 0.6 }}
+                animate={{ opacity: 0 }}
+                transition={{ duration: 0.3, ease: "easeOut" }}
+              >
+                <motion.div
+                  className="rounded-full"
+                  style={{ background: "radial-gradient(circle, #10b98155 0%, transparent 70%)" }}
+                  initial={{ width: 100, height: 100 }}
+                  animate={{ width: 600, height: 600 }}
+                  transition={{ duration: 0.3, ease: "easeOut" }}
+                />
+              </motion.div>
+            )}
+          </AnimatePresence>
         </div>
 
         <div>
@@ -69,15 +122,34 @@ export default function Scan() {
           </div>
         </div>
 
+        <AnimatePresence>
+          {topFinding && stageReached(stage, "hero") && (
+            <TopFindingCard finding={topFinding} key="top" />
+          )}
+        </AnimatePresence>
+
+        {ranked && stageReached(stage, "sparkline") && findings && (
+          <SeveritySparkline findings={findings as any} />
+        )}
+
         <div>
           <h2 className="text-sm uppercase tracking-wider text-slate-500 mb-3">
             Findings {ranked && <span className="text-emerald-400">· ranked</span>}
           </h2>
-          <FindingsTable findings={(findings ?? []) as any} ranked={ranked} />
+          <FindingsTable
+            findings={(findings ?? []) as any}
+            ranked={ranked && stageReached(stage, "table")}
+            pulseWaveAt={pulseWaveAt}
+          />
         </div>
       </div>
     </motion.div>
   );
+}
+
+function stageReached(stage: RevealStage, target: RevealStage): boolean {
+  const order: RevealStage[] = ["idle", "settle", "hero", "sparkline", "table", "wave", "done"];
+  return order.indexOf(stage) >= order.indexOf(target);
 }
 
 function StatusBadge({ status }: { status: string }) {
