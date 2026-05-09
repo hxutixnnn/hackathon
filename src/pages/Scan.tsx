@@ -10,6 +10,7 @@ import FindingsTable, { type FindingRow } from "../components/FindingsTable";
 import TopFindingCard from "../components/TopFindingCard";
 import SeveritySparkline from "../components/SeveritySparkline";
 import { useActiveAngle } from "../lib/useActiveAngle";
+import { StatsBar } from "../components/StatsBar";
 
 type RevealStage = "idle" | "settle" | "hero" | "sparkline" | "table" | "wave" | "done";
 
@@ -90,6 +91,17 @@ export default function Scan() {
             {scan.error && <div className="text-red-400 text-sm">Error: {scan.error}</div>}
           </div>
         </div>
+
+        <StatsBar
+          totalAgents={scan.totalAgents}
+          completedAgents={scan.completedAgents}
+          cacheHits={scan.cacheHits ?? 0}
+          cacheMisses={scan.cacheMisses ?? 0}
+          rawFindings={findings?.length ?? 0}
+          keptFindings={
+            findings?.filter((f) => f.reducerKept !== false).length ?? 0
+          }
+        />
 
         <div className="relative bg-slate-950 border border-slate-900 rounded-xl p-4" style={{ height: 520 }}>
           <Constellation
