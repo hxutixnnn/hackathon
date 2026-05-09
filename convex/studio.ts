@@ -1,5 +1,5 @@
 import { v } from "convex/values";
-import { internalMutation, query } from "./_generated/server";
+import { internalMutation, internalQuery, query } from "./_generated/server";
 
 const KIND = v.union(v.literal("explain"), v.literal("prove"), v.literal("fix"));
 
@@ -109,5 +109,19 @@ export const topThreeFindingIds = query({
       .sort((a, b) => (a.reducerRank ?? 999) - (b.reducerRank ?? 999))
       .slice(0, 3)
       .map((f) => f._id);
+  },
+});
+
+export const getFinding = internalQuery({
+  args: { findingId: v.id("findings") },
+  handler: async (ctx, { findingId }) => {
+    const finding = await ctx.db.get(findingId);
+    if (!finding) return null;
+    const scan = await ctx.db.get(finding.scanId);
+    return {
+      finding,
+      repoUrl: scan?.repoUrl,
+      clonedSha: scan?.clonedSha,
+    };
   },
 });
