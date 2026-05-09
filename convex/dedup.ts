@@ -123,13 +123,8 @@ async function runEvalAndFinish(
   scanId: any,
   repoUrl: string,
 ): Promise<void> {
-  // eval.score wired up in Task 14. Currently unwired so dedup completes without eval.
   if (corpusFor(repoUrl)) {
-    try {
-      await ctx.runAction((internal as any).eval?.score, { scanId });
-    } catch (e) {
-      console.warn("eval.score not available yet (expected before Task 14)", e);
-    }
+    await ctx.runAction(internal.eval.score, { scanId });
   }
   await ctx.runMutation(internal.scans.setStatus, { scanId, status: "done" });
 }

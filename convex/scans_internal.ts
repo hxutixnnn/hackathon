@@ -15,3 +15,14 @@ export const findingsForReducer = internalQuery({
       .collect();
   },
 });
+
+export const keptFindings = internalQuery({
+  args: { scanId: v.id("scans") },
+  handler: async (ctx, { scanId }) => {
+    return await ctx.db
+      .query("findings")
+      .withIndex("by_scan", (q) => q.eq("scanId", scanId))
+      .filter((q) => q.neq(q.field("reducerKept"), false))
+      .collect();
+  },
+});
