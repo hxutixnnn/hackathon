@@ -19,3 +19,25 @@ export const applyClusters = internalMutation({
     }
   },
 });
+
+export const applyRerank = internalMutation({
+  args: {
+    ranks: v.array(
+      v.object({
+        id: v.string(),
+        rank: v.number(),
+        severity: v.number(),
+      }),
+    ),
+  },
+  handler: async (ctx, { ranks }) => {
+    for (const r of ranks) {
+      try {
+        await ctx.db.patch(r.id as any, {
+          reducerRank: r.rank,
+          reducerSeverity: r.severity,
+        });
+      } catch {}
+    }
+  },
+});
