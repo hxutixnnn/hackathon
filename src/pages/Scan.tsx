@@ -62,7 +62,7 @@ export default function Scan() {
     if (!findings || !ranked) return null;
     const kept = findings.filter((f) => f.reducerKept !== false);
     if (kept.length === 0) return null;
-    const sorted = [...kept].sort((a, b) => (a.reducerRank ?? 999) - (b.reducerRank ?? 999));
+    const sorted = [...kept].sort((a, b) => b.severity - a.severity);
     return sorted[0] ?? null;
   }, [findings, ranked]);
 
