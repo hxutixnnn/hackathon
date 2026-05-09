@@ -64,32 +64,67 @@ export default function Constellation(props: ConstellationProps) {
         style={{ transformOrigin: `${CENTER}px ${CENTER}px` }}
       >
         {/* lines from center to each node */}
-        {ANGLE_POSITIONS.map((p) => (
-          <line
-            key={`l-${p.id}`}
-            x1={CENTER}
-            y1={CENTER}
-            x2={p.x}
-            y2={p.y}
-            stroke="#1e293b"
-            strokeWidth={1}
-            opacity={0.5}
-          />
-        ))}
+        {ANGLE_POSITIONS.map((p) => {
+          const summary = isLive
+            ? (props as LiveProps).summaries.find((s) => s.angle === p.id)
+            : undefined;
+          const opacity = isLive ? 0.2 + Math.min((summary?.count ?? 0) * 0.06, 0.6) : 0.5;
+          return (
+            <line
+              key={`l-${p.id}`}
+              x1={CENTER}
+              y1={CENTER}
+              x2={p.x}
+              y2={p.y}
+              stroke="#1e293b"
+              strokeWidth={1}
+              opacity={opacity}
+              style={{ transition: "opacity 400ms ease" }}
+            />
+          );
+        })}
 
         {/* outer nodes */}
-        {ANGLE_POSITIONS.map((p) => (
-          <g key={`n-${p.id}`}>
-            <circle
-              cx={p.x}
-              cy={p.y}
-              r={6}
-              fill={SEVERITY_HEX.idle}
-              className={isLive ? "" : "animate-twinkle"}
-              style={{ animationDelay: isLive ? undefined : `${(p.x + p.y) % 4}s` }}
-            />
-          </g>
-        ))}
+        {ANGLE_POSITIONS.map((p) => {
+          const summary = isLive
+            ? (props as LiveProps).summaries.find((s) => s.angle === p.id)
+            : undefined;
+          const { radius, fill } = nodeStyleFor(summary);
+          const isActive = isLive && (props as LiveProps).activeAngle === p.id;
+          return (
+            <g
+              key={`n-${p.id}`}
+              className={isActive ? "animate-nodePulse" : ""}
+              style={{
+                transformOrigin: `${p.x}px ${p.y}px`,
+              }}
+            >
+              <circle
+                cx={p.x}
+                cy={p.y}
+                r={isLive ? radius : 6}
+                fill={isLive ? fill : SEVERITY_HEX.idle}
+                className={isLive ? "" : "animate-twinkle"}
+                style={{
+                  animationDelay: isLive ? undefined : `${(p.x + p.y) % 4}s`,
+                  transition: "r 400ms ease, fill 400ms ease",
+                }}
+              />
+              {isLive && (
+                <text
+                  x={p.x}
+                  y={p.y + radius + 14}
+                  textAnchor="middle"
+                  fontSize={10}
+                  fontFamily="ui-monospace, monospace"
+                  fill="#64748b"
+                >
+                  {p.label}
+                </text>
+              )}
+            </g>
+          );
+        })}
       </g>
 
       {/* center node — outside rotating group so labels stay upright */}
