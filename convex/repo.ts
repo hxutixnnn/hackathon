@@ -22,7 +22,7 @@ export function parseGithubUrl(url: string): { owner: string; repo: string } {
 
 export async function downloadRepo(repoUrl: string): Promise<RepoFile[]> {
   const { owner, repo } = parseGithubUrl(repoUrl);
-  const octokit = new Octokit();
+  const octokit = new Octokit({ auth: process.env.GH_TOKEN });
 
   const res = await octokit.repos.downloadTarballArchive({ owner, repo, ref: "" });
   const buffer = Buffer.from(res.data as ArrayBuffer);
