@@ -1,13 +1,26 @@
-export default function SeverityBadge({ severity }: { severity: number }) {
+import { severityTier } from "../lib/severity";
+
+export default function SeverityBadge({
+  severity,
+  pulse = false,
+}: {
+  severity: number;
+  pulse?: boolean;
+}) {
   const s = Math.max(1, Math.min(10, Math.round(severity)));
-  const cls =
-    s >= 9 ? "bg-red-600 text-white" :
-    s >= 7 ? "bg-orange-500 text-white" :
-    s >= 5 ? "bg-yellow-500 text-slate-900" :
-    s >= 3 ? "bg-blue-500 text-white" :
-              "bg-slate-600 text-slate-100";
+  const tier = severityTier(s);
+  const bgClass = {
+    critical: "bg-severity-critical text-white",
+    high: "bg-severity-high text-white",
+    medium: "bg-severity-medium text-slate-900",
+    low: "bg-severity-low text-slate-900",
+    idle: "bg-severity-idle text-slate-100",
+  }[tier];
+  const pulseClass = pulse ? "ring-2 ring-white/40" : "";
   return (
-    <span className={`inline-flex items-center justify-center w-8 h-8 rounded-md font-bold text-sm ${cls}`}>
+    <span
+      className={`inline-flex items-center justify-center w-8 h-8 rounded-md font-bold text-sm transition-all duration-300 ${bgClass} ${pulseClass}`}
+    >
       {s}
     </span>
   );
