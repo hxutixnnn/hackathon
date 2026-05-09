@@ -24,6 +24,30 @@ export const countsByAngle = query({
   },
 });
 
+export const angleSummaries = query({
+  args: { scanId: v.id("scans") },
+  handler: async (ctx, { scanId }) => {
+    const rows = await ctx.db
+      .query("findings")
+      .withIndex("by_scan", (q) => q.eq("scanId", scanId))
+      .collect();
+    const byAngle: Record<string, { count: number; maxSeverity: number; latestAt: number }> = {};
+    for (const r of rows) {
+      const cur = byAngle[r.angle] ?? { count: 0, maxSeverity: 0, latestAt: 0 };
+      cur.count += 1;
+      cur.maxSeverity = Math.max(cur.maxSeverity, r.severity);
+      cur.latestAt = Math.max(cur.latestAt, r._creationTime);
+      byAngle[r.angle] = cur;
+    }
+    return Object.entries(byAngle).map(([angle, v]) => ({
+      angle,
+      count: v.count,
+      maxSeverity: v.maxSeverity,
+      latestAt: v.latestAt,
+    }));
+  },
+});
+
 export const insertMany = internalMutation({
   args: {
     scanId: v.id("scans"),
