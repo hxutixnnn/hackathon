@@ -20,6 +20,7 @@ export default defineSchema({
     cacheHits: v.optional(v.number()),
     cacheMisses: v.optional(v.number()),
     dedupStartedAt: v.optional(v.number()),
+    clonedSha: v.optional(v.string()),
   }),
 
   findings: defineTable({
@@ -79,4 +80,28 @@ export default defineSchema({
     matchedTruthIds: v.array(v.id("truth")),
     matchedFindingIds: v.array(v.id("findings")),
   }).index("by_scan", ["scanId"]),
+
+  remediations: defineTable({
+    scanId: v.id("scans"),
+    findingId: v.id("findings"),
+    kind: v.union(v.literal("explain"), v.literal("prove"), v.literal("fix")),
+    status: v.union(
+      v.literal("pending"),
+      v.literal("running"),
+      v.literal("done"),
+      v.literal("error"),
+    ),
+    explainMarkdown: v.optional(v.string()),
+    codeSnippet: v.optional(v.string()),
+    proofKind: v.optional(v.string()),
+    proofContent: v.optional(v.string()),
+    patchUnifiedDiff: v.optional(v.string()),
+    fixSummary: v.optional(v.string()),
+    fixBody: v.optional(v.string()),
+    error: v.optional(v.string()),
+    startedAt: v.number(),
+    finishedAt: v.optional(v.number()),
+  })
+    .index("by_finding_kind", ["findingId", "kind"])
+    .index("by_scan", ["scanId"]),
 });
