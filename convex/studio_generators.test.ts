@@ -39,3 +39,23 @@ describe("runExplainGenerator", () => {
     await expect(runExplainGenerator(finding, "snippet", client)).rejects.toThrow("rate limit");
   });
 });
+
+import { runProveGenerator } from "./studio_generators";
+
+describe("runProveGenerator", () => {
+  it("returns proofKind+content from valid response", async () => {
+    const client = fakeClient(
+      JSON.stringify({ proofKind: "payload", proofContent: "' OR 1=1--" }),
+    );
+    const result = await runProveGenerator(finding, "snippet", client);
+    expect(result.proofKind).toBe("payload");
+    expect(result.proofContent).toBe("' OR 1=1--");
+  });
+
+  it("defaults proofKind to template's expected kind when missing", async () => {
+    const sqliFinding = { ...finding, angle: "sql_injection" };
+    const client = fakeClient(JSON.stringify({ proofContent: "' OR 1=1--" }));
+    const result = await runProveGenerator(sqliFinding, "snippet", client);
+    expect(result.proofKind).toBe("payload");
+  });
+});

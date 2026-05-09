@@ -32,3 +32,25 @@ export async function runExplainGenerator(
 
 // buildProvePrompt, buildFixPrompt, PROVE_TEMPLATES will be used in Tasks 7 and 8
 export { buildProvePrompt, buildFixPrompt, PROVE_TEMPLATES };
+
+const ProveSchema = z.object({
+  proofKind: z.string().optional(),
+  proofContent: z.string(),
+});
+
+export type ProveResult = { proofKind: string; proofContent: string };
+
+export async function runProveGenerator(
+  finding: FindingForPrompt,
+  snippet: string,
+  client: OpenAIClient,
+): Promise<ProveResult> {
+  const prompt = buildProvePrompt(finding, snippet);
+  const text = await client.complete(prompt, 800);
+  const parsed = ProveSchema.parse(JSON.parse(text));
+  const fallbackKind = PROVE_TEMPLATES[finding.angle]?.proofKind ?? "payload";
+  return {
+    proofKind: parsed.proofKind ?? fallbackKind,
+    proofContent: parsed.proofContent,
+  };
+}
