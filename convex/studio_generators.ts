@@ -33,6 +33,38 @@ export async function runExplainGenerator(
 // buildProvePrompt, buildFixPrompt, PROVE_TEMPLATES will be used in Tasks 7 and 8
 export { buildProvePrompt, buildFixPrompt, PROVE_TEMPLATES };
 
+const FixSchema = z.object({
+  patchUnifiedDiff: z.string(),
+  fixSummary: z.string(),
+  fixBody: z.string(),
+});
+
+export type FixResult = {
+  patchUnifiedDiff: string;
+  fixSummary: string;
+  fixBody: string;
+};
+
+export class PatchMalformedError extends Error {
+  constructor(msg = "patch malformed: missing --- a/ or +++ b/ headers") {
+    super(msg);
+  }
+}
+
+export async function runFixGenerator(
+  finding: FindingForPrompt,
+  snippet: string,
+  client: OpenAIClient,
+): Promise<FixResult> {
+  const prompt = buildFixPrompt(finding, snippet);
+  const text = await client.complete(prompt, 1200);
+  const parsed = FixSchema.parse(JSON.parse(text));
+  if (!parsed.patchUnifiedDiff.includes("--- a/") || !parsed.patchUnifiedDiff.includes("+++ b/")) {
+    throw new PatchMalformedError();
+  }
+  return parsed;
+}
+
 const ProveSchema = z.object({
   proofKind: z.string().optional(),
   proofContent: z.string(),

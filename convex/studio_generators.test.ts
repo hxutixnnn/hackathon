@@ -59,3 +59,34 @@ describe("runProveGenerator", () => {
     expect(result.proofKind).toBe("payload");
   });
 });
+
+import { runFixGenerator } from "./studio_generators";
+
+describe("runFixGenerator", () => {
+  const validDiff =
+    "--- a/src/web.ts\n+++ b/src/web.ts\n@@ -5,1 +5,1 @@\n-res.send(`<h1>${req.query.q}</h1>`)\n+res.send(`<h1>${escapeHtml(req.query.q)}</h1>`)";
+
+  it("returns parsed result on valid diff", async () => {
+    const client = fakeClient(
+      JSON.stringify({
+        patchUnifiedDiff: validDiff,
+        fixSummary: "Escape user input in /search",
+        fixBody: "Apply escapeHtml.",
+      }),
+    );
+    const result = await runFixGenerator(finding, "snippet", client);
+    expect(result.patchUnifiedDiff).toContain("--- a/src/web.ts");
+    expect(result.fixSummary).toBe("Escape user input in /search");
+  });
+
+  it("throws PatchMalformedError when diff missing required headers", async () => {
+    const client = fakeClient(
+      JSON.stringify({
+        patchUnifiedDiff: "no headers here just text",
+        fixSummary: "Bad",
+        fixBody: "Bad",
+      }),
+    );
+    await expect(runFixGenerator(finding, "snippet", client)).rejects.toThrow(/malformed/);
+  });
+});
