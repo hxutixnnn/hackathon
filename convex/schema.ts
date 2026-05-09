@@ -17,6 +17,9 @@ export default defineSchema({
     error: v.optional(v.string()),
     startedAt: v.number(),
     finishedAt: v.optional(v.number()),
+    cacheHits: v.optional(v.number()),
+    cacheMisses: v.optional(v.number()),
+    dedupStartedAt: v.optional(v.number()),
   }),
 
   findings: defineTable({
@@ -32,5 +35,48 @@ export default defineSchema({
     reducerKept: v.optional(v.boolean()),
     reducerSeverity: v.optional(v.number()),
     reducerRank: v.optional(v.number()),
+  }).index("by_scan", ["scanId"]),
+
+  findingCache: defineTable({
+    cacheKey: v.string(),
+    angleId: v.string(),
+    chunkHash: v.string(),
+    model: v.string(),
+    promptVer: v.string(),
+    findings: v.array(
+      v.object({
+        file: v.string(),
+        lineStart: v.number(),
+        lineEnd: v.number(),
+        severity: v.number(),
+        title: v.string(),
+        description: v.string(),
+        evidence: v.string(),
+      }),
+    ),
+    createdAt: v.number(),
+  }).index("by_key", ["cacheKey"]),
+
+  truth: defineTable({
+    corpus: v.string(),
+    file: v.string(),
+    lineStart: v.number(),
+    lineEnd: v.number(),
+    cwe: v.optional(v.string()),
+    title: v.string(),
+    source: v.string(),
+  }).index("by_corpus", ["corpus"]),
+
+  benchmarks: defineTable({
+    scanId: v.id("scans"),
+    corpus: v.string(),
+    tp: v.number(),
+    fp: v.number(),
+    fn: v.number(),
+    precision: v.number(),
+    recall: v.number(),
+    f1: v.number(),
+    matchedTruthIds: v.array(v.id("truth")),
+    matchedFindingIds: v.array(v.id("findings")),
   }).index("by_scan", ["scanId"]),
 });
