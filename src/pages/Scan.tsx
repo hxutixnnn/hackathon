@@ -1,4 +1,4 @@
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useState, useMemo, useRef } from "react";
 import { useParams } from "react-router-dom";
 import { useQuery } from "convex/react";
 import { motion, AnimatePresence } from "framer-motion";
@@ -23,11 +23,12 @@ export default function Scan() {
 
   const [stage, setStage] = useState<RevealStage>("idle");
   const [pulseWaveAt, setPulseWaveAt] = useState<number | undefined>();
+  const firedRef = useRef(false);
 
   // Trigger the reveal sequence once when status flips to "done".
   useEffect(() => {
-    if (scan?.status !== "done") return;
-    if (stage !== "idle") return;
+    if (scan?.status !== "done" || firedRef.current) return;
+    firedRef.current = true;
     const timers: ReturnType<typeof setTimeout>[] = [];
     setStage("settle");
     timers.push(setTimeout(() => setStage("hero"), 300));
@@ -39,7 +40,7 @@ export default function Scan() {
     }, 1450));
     timers.push(setTimeout(() => setStage("done"), 2100));
     return () => timers.forEach(clearTimeout);
-  }, [scan?.status, stage]);
+  }, [scan?.status]);
 
   const ranked = scan?.status === "done";
 
