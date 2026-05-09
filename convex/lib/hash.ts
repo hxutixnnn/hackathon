@@ -1,3 +1,4 @@
+"use node";
 import { createHash } from "node:crypto";
 
 export type ChunkFile = { path: string; content: string };
