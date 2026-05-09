@@ -33,6 +33,5 @@ export default {
       },
     },
   },
-  safelist: ["animate-twinkle", "animate-spinSlow", "animate-nodePulse"],
   plugins: [],
 };

@@ -41,6 +41,8 @@ const ANGLE_POSITIONS = ANGLES.map((a, i) => {
 
 export default function Constellation(props: ConstellationProps) {
   const { className = "" } = props;
+  // NOTE: TypeScript does not narrow the discriminated union through this boolean.
+  // Live-mode-only access to props (e.g. props.summaries) requires `(props as LiveProps)` cast.
   const isLive = props.mode === "live";
 
   return (
@@ -58,10 +60,8 @@ export default function Constellation(props: ConstellationProps) {
 
       {/* idle: rotate the entire group; live: no rotation */}
       <g
-        style={{
-          transformOrigin: `${CENTER}px ${CENTER}px`,
-          animation: isLive ? undefined : "spinSlow 60s linear infinite",
-        }}
+        className={isLive ? "" : "animate-spinSlow"}
+        style={{ transformOrigin: `${CENTER}px ${CENTER}px` }}
       >
         {/* lines from center to each node */}
         {ANGLE_POSITIONS.map((p) => (
@@ -85,10 +85,8 @@ export default function Constellation(props: ConstellationProps) {
               cy={p.y}
               r={6}
               fill={SEVERITY_HEX.idle}
-              style={{
-                animation: isLive ? undefined : "twinkle 4s ease-in-out infinite",
-                animationDelay: `${(p.x + p.y) % 4}s`,
-              }}
+              className={isLive ? "" : "animate-twinkle"}
+              style={{ animationDelay: isLive ? undefined : `${(p.x + p.y) % 4}s` }}
             />
           </g>
         ))}
