@@ -23,6 +23,10 @@ import type * as prompts from "../prompts.js";
 import type * as repo from "../repo.js";
 import type * as scans from "../scans.js";
 import type * as scans_internal from "../scans_internal.js";
+import type * as studio from "../studio.js";
+import type * as studio_actions from "../studio_actions.js";
+import type * as studio_generators from "../studio_generators.js";
+import type * as studio_prompts from "../studio_prompts.js";
 import type * as truth from "../truth.js";
 import type * as truth_data from "../truth_data.js";
 
@@ -48,6 +52,10 @@ declare const fullApi: ApiFromModules<{
   repo: typeof repo;
   scans: typeof scans;
   scans_internal: typeof scans_internal;
+  studio: typeof studio;
+  studio_actions: typeof studio_actions;
+  studio_generators: typeof studio_generators;
+  studio_prompts: typeof studio_prompts;
   truth: typeof truth;
   truth_data: typeof truth_data;
 }>;
