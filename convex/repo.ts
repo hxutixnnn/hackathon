@@ -13,6 +13,7 @@ const MAX_FILES = 200;
 const MAX_FILE_BYTES = 50_000;
 
 export type RepoFile = { path: string; content: string };
+export type DownloadResult = { files: RepoFile[]; sha?: string };
 
 export function parseGithubUrl(url: string): { owner: string; repo: string } {
   const m = url.match(/github\.com[/:]([^/]+)\/([^/]+?)(?:\.git|\/|$)/);
@@ -20,7 +21,7 @@ export function parseGithubUrl(url: string): { owner: string; repo: string } {
   return { owner: m[1], repo: m[2] };
 }
 
-export async function downloadRepo(repoUrl: string): Promise<RepoFile[]> {
+export async function downloadRepo(repoUrl: string): Promise<DownloadResult> {
   const { owner, repo } = parseGithubUrl(repoUrl);
   const octokit = new Octokit({ auth: process.env.GH_TOKEN });
 
@@ -34,10 +35,13 @@ export async function downloadRepo(repoUrl: string): Promise<RepoFile[]> {
 
   const entries = fs.readdirSync(tmpDir).filter((f) => f !== "repo.tar.gz");
   const root = path.join(tmpDir, entries[0]);
+  // GitHub tarball top-level dir is `<owner>-<repo>-<sha7>` or similar
+  const shaMatch = entries[0].match(/-([a-f0-9]{7,40})$/);
+  const sha = shaMatch?.[1];
 
   const files: RepoFile[] = [];
   walk(root, root, files);
-  return files;
+  return { files, sha };
 
   function walk(dir: string, base: string, out: RepoFile[]) {
     if (out.length >= MAX_FILES) return;
@@ -86,4 +90,23 @@ export function chunkFiles(
   }
   if (current.length > 0) chunks.push(current);
   return chunks;
+}
+
+export async function fetchSnippet(
+  repoUrl: string,
+  sha: string,
+  filePath: string,
+  lineStart: number,
+  lineEnd: number,
+  padding = 10,
+): Promise<string | null> {
+  const { owner, repo } = parseGithubUrl(repoUrl);
+  const url = `https://raw.githubusercontent.com/${owner}/${repo}/${sha}/${filePath}`;
+  const r = await fetch(url);
+  if (!r.ok) return null;
+  const text = await r.text();
+  const lines = text.split("\n");
+  const start = Math.max(0, lineStart - 1 - padding);
+  const end = Math.min(lines.length, lineEnd + padding);
+  return lines.slice(start, end).map((ln, i) => `${String(start + i + 1).padStart(4)}: ${ln}`).join("\n");
 }

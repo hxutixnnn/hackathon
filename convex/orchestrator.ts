@@ -18,8 +18,11 @@ export const run = internalAction({
       const scan = await ctx.runQuery(internal.scans_internal.getInternal, { scanId });
       if (!scan) throw new Error("Scan disappeared");
 
-      const files = await downloadRepo(scan.repoUrl);
+      const { files, sha } = await downloadRepo(scan.repoUrl);
       if (files.length === 0) throw new Error("No source files found in repo");
+      if (sha) {
+        await ctx.runMutation(internal.scans.setClonedSha, { scanId, sha });
+      }
 
       type Task = { angleId: string; files: { path: string; content: string }[] };
       const tasks: Task[] = [];

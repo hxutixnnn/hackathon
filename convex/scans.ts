@@ -50,6 +50,13 @@ export const setTotalAgents = internalMutation({
   },
 });
 
+export const setClonedSha = internalMutation({
+  args: { scanId: v.id("scans"), sha: v.string() },
+  handler: async (ctx, { scanId, sha }) => {
+    await ctx.db.patch(scanId, { clonedSha: sha });
+  },
+});
+
 export const bumpProgress = internalMutation({
   args: { scanId: v.id("scans") },
   handler: async (ctx, { scanId }) => {

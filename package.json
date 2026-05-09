@@ -18,7 +18,9 @@
     "framer-motion": "^12.38.0",
     "openai": "^6.37.0",
     "react": "^19.2.5",
+    "react-diff-viewer-continued": "^4.2.2",
     "react-dom": "^19.2.5",
+    "react-markdown": "^10.1.0",
     "react-router-dom": "^7.15.0",
     "tar": "^7.5.15",
     "zod": "^4.4.3"

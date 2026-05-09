@@ -62,53 +62,28 @@ git commit -m "deps: add react-markdown + react-diff-viewer-continued for remedi
 
 ---
 
-## Task 2: Schema — add `remediations` table and `clonedSha`
+## Task 2: Schema — additive changes only
 
 **Files:**
 - Modify: `convex/schema.ts`
 
-- [ ] **Step 1: Update schema**
+**Important:** The schema also defines `findingCache`, `truth`, and `benchmarks` tables and additional `scans` fields (`cacheHits`, `cacheMisses`, `dedupStartedAt`) added by the dedup/eval pipeline. **Do not remove or alter those.** This task only adds `clonedSha` to `scans` and the new `remediations` table.
 
-Replace the contents of `convex/schema.ts` with:
+- [ ] **Step 1: Add `clonedSha` to the scans table**
+
+Use Edit, not Write. Find the existing scans table block ending with `finishedAt: v.optional(v.number()),` (or whatever last existing field is) and insert `clonedSha: v.optional(v.string()),` immediately before the closing `}),` of the scans table.
+
+After the edit, the scans table block should include all existing fields plus this one new line:
 
 ```typescript
-import { defineSchema, defineTable } from "convex/server";
-import { v } from "convex/values";
-
-export default defineSchema({
-  scans: defineTable({
-    repoUrl: v.string(),
-    status: v.union(
-      v.literal("pending"),
-      v.literal("cloning"),
-      v.literal("scanning"),
-      v.literal("reducing"),
-      v.literal("done"),
-      v.literal("error"),
-    ),
-    totalAgents: v.number(),
-    completedAgents: v.number(),
-    error: v.optional(v.string()),
-    startedAt: v.number(),
-    finishedAt: v.optional(v.number()),
     clonedSha: v.optional(v.string()),
-  }),
+```
 
-  findings: defineTable({
-    scanId: v.id("scans"),
-    angle: v.string(),
-    file: v.string(),
-    lineStart: v.number(),
-    lineEnd: v.number(),
-    severity: v.number(),
-    title: v.string(),
-    description: v.string(),
-    evidence: v.string(),
-    reducerKept: v.optional(v.boolean()),
-    reducerSeverity: v.optional(v.number()),
-    reducerRank: v.optional(v.number()),
-  }).index("by_scan", ["scanId"]),
+- [ ] **Step 2: Add the `remediations` table**
 
+Append the new table definition to the schema object (after the last existing table, before the closing `});` of `defineSchema`):
+
+```typescript
   remediations: defineTable({
     scanId: v.id("scans"),
     findingId: v.id("findings"),
@@ -132,7 +107,6 @@ export default defineSchema({
   })
     .index("by_finding_kind", ["findingId", "kind"])
     .index("by_scan", ["scanId"]),
-});
 ```
 
 - [ ] **Step 2: Push schema and verify**
@@ -968,8 +942,8 @@ export const topThreeFindingIds = query({
       .withIndex("by_scan", (q) => q.eq("scanId", scanId))
       .collect();
     return rows
-      .filter((f) => f.reducerKept === true && f.reducerRank !== undefined)
-      .sort((a, b) => (a.reducerRank ?? 999) - (b.reducerRank ?? 999))
+      .filter((f) => f.reducerKept === true)
+      .sort((a, b) => b.severity - a.severity)
       .slice(0, 3)
       .map((f) => f._id);
   },
@@ -1250,36 +1224,37 @@ git commit -m "studio: public ensure action — idempotent lazy scheduler"
 
 ---
 
-## Task 13: Eager spawn — top-3 hook in reducer
+## Task 13: Eager spawn — top-3 hook in dedup pipeline
 
 **Files:**
-- Modify: `convex/reducer.ts`
+- Modify: `convex/dedup.ts`
+- Modify: `convex/studio.ts`
 
-- [ ] **Step 1: Add scheduler call after status=done**
+**Architecture note:** The original `convex/reducer.ts` was replaced by a dedup pipeline (`convex/dedup.ts`). The "scan done" hook is now in `runEvalAndFinish` inside `dedup.ts`, which calls `setStatus({status: "done"})` after dedup (and optional eval) completes. The dedup mutations (`dedup_mutations.applyClusters`) only set `reducerKept` (true/false) — they do NOT set `reducerRank` or `reducerSeverity`. So top-3 ordering uses `severity` desc among `reducerKept===true` findings.
 
-In `convex/reducer.ts`, find this line in the `run` handler:
+- [ ] **Step 1: Add scheduler call after `setStatus("done")` in `runEvalAndFinish`**
+
+In `convex/dedup.ts`, find the `runEvalAndFinish` helper. The last line is:
 
 ```typescript
 await ctx.runMutation(internal.scans.setStatus, { scanId, status: "done" });
 ```
 
-Replace it with:
+Append after it (still inside the function):
 
 ```typescript
-await ctx.runMutation(internal.scans.setStatus, { scanId, status: "done" });
-
-// Schedule top-3 eager studio jobs (3 findings × 3 kinds)
-const topIds: string[] = await ctx.runQuery(internal.studio.topThreeFindingIdsInternal, { scanId });
-for (const id of topIds) {
-  await ctx.scheduler.runAfter(0, internal.studio_actions.generateExplain, { findingId: id as any });
-  await ctx.scheduler.runAfter(0, internal.studio_actions.generateProve, { findingId: id as any });
-  await ctx.scheduler.runAfter(0, internal.studio_actions.generateFix, { findingId: id as any });
-}
+  // Schedule top-3 eager studio jobs (3 findings × 3 kinds)
+  const topIds: any[] = await ctx.runQuery(internal.studio.topThreeFindingIdsInternal, { scanId });
+  for (const id of topIds) {
+    await ctx.scheduler.runAfter(0, internal.studio_actions.generateExplain, { findingId: id });
+    await ctx.scheduler.runAfter(0, internal.studio_actions.generateProve, { findingId: id });
+    await ctx.scheduler.runAfter(0, internal.studio_actions.generateFix, { findingId: id });
+  }
 ```
 
-- [ ] **Step 2: Add internal version of the top-3 query**
+- [ ] **Step 2: Add internal version of the top-3 query (severity-ordered)**
 
-`topThreeFindingIds` is currently a public `query`. Internal callers (reducer) should use an `internalQuery` to avoid exposing public surface. Append to `convex/studio.ts`:
+`topThreeFindingIds` is currently a public `query`. Internal callers (dedup) should use an `internalQuery`. Append to `convex/studio.ts`:
 
 ```typescript
 export const topThreeFindingIdsInternal = internalQuery({
@@ -1290,24 +1265,45 @@ export const topThreeFindingIdsInternal = internalQuery({
       .withIndex("by_scan", (q) => q.eq("scanId", scanId))
       .collect();
     return rows
-      .filter((f) => f.reducerKept === true && f.reducerRank !== undefined)
-      .sort((a, b) => (a.reducerRank ?? 999) - (b.reducerRank ?? 999))
+      .filter((f) => f.reducerKept === true)
+      .sort((a, b) => b.severity - a.severity)
       .slice(0, 3)
       .map((f) => f._id);
   },
 });
 ```
 
-- [ ] **Step 3: Verify typecheck**
+- [ ] **Step 3: Update the public `topThreeFindingIds` query to also use severity ordering**
+
+In `convex/studio.ts`, replace the existing `topThreeFindingIds` handler body so it matches the internal version's ordering (severity desc among kept findings). The previous version ordered by `reducerRank` which is no longer populated by the dedup pipeline.
+
+```typescript
+export const topThreeFindingIds = query({
+  args: { scanId: v.id("scans") },
+  handler: async (ctx, { scanId }) => {
+    const rows = await ctx.db
+      .query("findings")
+      .withIndex("by_scan", (q) => q.eq("scanId", scanId))
+      .collect();
+    return rows
+      .filter((f) => f.reducerKept === true)
+      .sort((a, b) => b.severity - a.severity)
+      .slice(0, 3)
+      .map((f) => f._id);
+  },
+});
+```
+
+- [ ] **Step 4: Verify typecheck**
 
 Run: `npm run build`
 Expected: build succeeds.
 
-- [ ] **Step 4: Commit**
+- [ ] **Step 5: Commit**
 
 ```bash
-git add convex/reducer.ts convex/studio.ts
-git commit -m "studio: eager top-3 spawn after reducer marks scan done"
+git add convex/dedup.ts convex/studio.ts
+git commit -m "studio: eager top-3 spawn at end of dedup pipeline (severity-ordered)"
 ```
 
 ---
@@ -1839,8 +1835,10 @@ export default function FindingsTable({
   const [waveActive, setWaveActive] = useState(false);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  // Dedup pipeline only sets reducerKept; reducerRank/Severity are no longer populated.
+  // In ranked mode, show kept findings sorted by severity desc.
   const visible = ranked
-    ? findings.filter((f) => f.reducerKept !== false).sort((a, b) => (a.reducerRank ?? 999) - (b.reducerRank ?? 999))
+    ? findings.filter((f) => f.reducerKept !== false).sort((a, b) => b.severity - a.severity)
     : [...findings].sort((a, b) => b.severity - a.severity);
 
   const wavePerRowMs = visible.length > 0 ? Math.min(600 / visible.length, 60) : 0;

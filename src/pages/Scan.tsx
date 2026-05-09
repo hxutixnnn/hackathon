@@ -12,6 +12,7 @@ import SeveritySparkline from "../components/SeveritySparkline";
 import { useActiveAngle } from "../lib/useActiveAngle";
 import { StatsBar } from "../components/StatsBar";
 import { BenchmarkPanel } from "../components/BenchmarkPanel";
+import RemediationDrawer from "../components/RemediationDrawer";
 
 type RevealStage = "idle" | "settle" | "hero" | "sparkline" | "table" | "wave" | "done";
 
@@ -23,11 +24,13 @@ export default function Scan() {
   const findings = useQuery(api.findings.byScan, { scanId });
   const benchmark = useQuery(api.eval.benchmarkByScan, { scanId });
   const summaries = (useQuery(api.findings.angleSummaries, { scanId }) ?? []) as AngleSummary[];
+  const topIds = useQuery(api.studio.topThreeFindingIds, { scanId });
   const activeAngle = useActiveAngle(summaries);
 
   const [stage, setStage] = useState<RevealStage>("idle");
   const [pulseWaveAt, setPulseWaveAt] = useState<number | undefined>();
   const [now, setNow] = useState<number>(() => Date.now());
+  const [selectedFinding, setSelectedFinding] = useState<FindingRow | null>(null);
   const firedRef = useRef(false);
 
   // Trigger the reveal sequence once when status flips to "done".
@@ -62,9 +65,14 @@ export default function Scan() {
     if (!findings || !ranked) return null;
     const kept = findings.filter((f) => f.reducerKept !== false);
     if (kept.length === 0) return null;
-    const sorted = [...kept].sort((a, b) => (a.reducerRank ?? 999) - (b.reducerRank ?? 999));
+    const sorted = [...kept].sort((a, b) => b.severity - a.severity);
     return sorted[0] ?? null;
   }, [findings, ranked]);
+
+  const topSet = useMemo(
+    () => new Set((topIds ?? []) as string[]),
+    [topIds],
+  );
 
   if (!scan) {
     return <div className="min-h-screen bg-slate-950 text-slate-100 p-8">Loading…</div>;
@@ -170,9 +178,15 @@ export default function Scan() {
             ranked={ranked && stageReached(stage, "table")}
             pulseWaveAt={pulseWaveAt}
             matchedFindingIds={benchmark?.matchedFindingIds as string[] | undefined}
+            onSelect={setSelectedFinding}
+            topThreeIds={topSet}
           />
         </div>
       </div>
+      <RemediationDrawer
+        finding={selectedFinding as Parameters<typeof RemediationDrawer>[0]["finding"]}
+        onClose={() => setSelectedFinding(null)}
+      />
     </motion.div>
   );
 }

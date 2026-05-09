@@ -181,4 +181,17 @@ async function runEvalAndFinish(
     await ctx.runAction(internal.eval.score, { scanId });
   }
   await ctx.runMutation(internal.scans.setStatus, { scanId, status: "done" });
+
+  // Schedule top-3 eager studio jobs (3 findings × 3 kinds).
+  // Isolated try/catch so transient scheduler errors don't flip the just-marked-done scan to error.
+  try {
+    const topIds: any[] = await ctx.runQuery(internal.studio.topThreeFindingIdsInternal, { scanId });
+    for (const id of topIds) {
+      await ctx.scheduler.runAfter(0, internal.studio_actions.generateExplain, { findingId: id });
+      await ctx.scheduler.runAfter(0, internal.studio_actions.generateProve, { findingId: id });
+      await ctx.scheduler.runAfter(0, internal.studio_actions.generateFix, { findingId: id });
+    }
+  } catch (err) {
+    console.error("studio eager spawn failed", err);
+  }
 }
