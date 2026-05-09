@@ -28,6 +28,8 @@ export default function Scan() {
   const firedRef = useRef(false);
 
   // Trigger the reveal sequence once when status flips to "done".
+  // (useQuery returns undefined on first render, so the StrictMode double-invoke
+  // bails out harmlessly before scan?.status is ever "done".)
   useEffect(() => {
     if (scan?.status !== "done" || firedRef.current) return;
     firedRef.current = true;
