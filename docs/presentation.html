@@ -99,22 +99,22 @@
       <!-- 3. SOLUTION + LIVE DEMO -->
       <section>
         <h2>The Solution</h2>
-        <h3>Paste a GitHub URL → 15 specialized auditors fan out across every file chunk → findings stream live</h3>
-        <div class="grid2" style="margin-top: 18px;">
+        <h3>Paste GitHub URL → 15 auditors fan out per file chunk → findings stream live</h3>
+        <div class="grid2" style="margin-top: 14px; grid-template-columns: 1.05fr 1fr; gap: 22px;">
           <div>
-            <ul>
-              <li><strong>15 attack angles</strong> per chunk: SQLi, XSS, authz, SSRF, secrets, deserialization, race, …</li>
-              <li><strong>Workpool concurrency 20</strong> — bounded parallelism, automatic retry</li>
-              <li><strong>Live constellation UI</strong> — every node = one auditor, pulses on new finding</li>
-              <li><strong>Convex live queries</strong> — zero polling, real-time stream to browser</li>
+            <ul style="font-size: 0.78em;">
+              <li><strong>15 attack angles</strong> per chunk: SQLi, XSS, authz, SSRF, secrets, race, …</li>
+              <li><strong>Workpool concurrency 20</strong> — bounded parallelism, retry</li>
+              <li><strong>Constellation UI</strong> — node per auditor, pulses on new finding</li>
+              <li><strong>Convex live queries</strong> — zero polling, real-time stream</li>
             </ul>
-            <p class="center" style="margin-top: 22px;">
-              <span class="stat">90s</span>
+            <p class="center" style="margin-top: 14px;">
+              <span class="stat" style="font-size: 1.9em;">90s</span>
               <span class="stat-label" style="margin-left: 10px;">vs 10 min sequential</span>
             </p>
           </div>
           <div class="center">
-            <img class="shot" src="home.png" alt="Home screen — constellation idle" />
+            <img class="shot" src="home.png" alt="Home screen — constellation idle" style="max-height: 440px; max-width: 100%;" />
           </div>
         </div>
       </section>
@@ -149,55 +149,45 @@ Browser ──WS── Convex ──schedule──> orchestrator (Node)
       <!-- 5. ACCURACY MOAT -->
       <section>
         <h2>The Accuracy Moat</h2>
-        <h3>What a "Codex CLI + prompt engineer" cannot replicate over a weekend</h3>
+        <h3>Three shipped systems a "Codex CLI + prompt engineer" cannot replicate over a weekend</h3>
         <div class="grid3" style="margin-top: 22px;">
-          <div class="card">
+          <div class="card" style="padding: 14px 16px;">
             <h3>Content-addressed cache</h3>
-            <p><span class="pill">sha256(angle|model|prompt|chunk)</span></p>
-            <p>Re-scan same code = <strong>0 LLM tokens</strong>. Hit rate shown live in StatsBar.</p>
+            <p style="font-size: 0.62em;"><span class="pill" style="font-size: 0.85em;">sha256(angle|model|promptVer|chunk)</span></p>
+            <p style="font-size: 0.62em;">Re-scan unchanged code = <strong>0 LLM tokens</strong>. Hit/miss live in StatsBar. <span class="pill" style="font-size: 0.85em;">PROMPT_VER</span> bump invalidates.</p>
           </div>
-          <div class="card">
+          <div class="card" style="padding: 14px 16px;">
             <h3>Embedding + union-find dedup</h3>
-            <p>Cosine ≥ 0.85, gated by file+line overlap. <em>Deterministic</em> — pure math, not an LLM.</p>
-            <p>Scales past 1000 findings; current single-LLM reducers cap at ~50.</p>
+            <p style="font-size: 0.62em;">Stage A: <em>deterministic</em> clustering — cosine ≥ 0.85, gated by file + line overlap. Pure math.</p>
+            <p style="font-size: 0.62em;">Stage B: LLM rerank top-30 only. Single-LLM reducers cap ~50; we scale past 1000.</p>
           </div>
-          <div class="card">
-            <h3>Juice-shop benchmark</h3>
-            <p>Hand-curated truth set. Every scan scored: <strong>Precision · Recall · F1</strong>.</p>
-            <p>Beat us? Prove it on the same corpus.</p>
-          </div>
-        </div>
-        <div class="grid2" style="margin-top: 28px;">
-          <div>
-            <h3 style="color: var(--low); margin: 0;">Remediation Studio</h3>
-            <ul style="margin-top: 8px;">
-              <li><strong>Explain</strong> — plain-English impact, attacker path</li>
-              <li><strong>Prove</strong> — payload / curl / CVE / interleaving per angle</li>
-              <li><strong>Fix</strong> — unified diff in a GitHub-styled PR mock</li>
-            </ul>
-            <p class="small">Top-3 findings precomputed eagerly. Click any other → on-demand.</p>
-          </div>
-          <div class="center">
-            <img class="shot" src="scan-done.png" alt="Scan done — findings + benchmark" style="max-height: 380px;" />
+          <div class="card" style="padding: 14px 16px;">
+            <h3>Juice-shop F1 benchmark</h3>
+            <p style="font-size: 0.62em;">~20 hand-curated truth rows from <span class="pill" style="font-size: 0.85em;">owasp-juice.shop</span>. Every juice-shop scan scored.</p>
+            <p style="font-size: 0.62em;">Live <strong>P · R · F1</strong> in BenchmarkPanel + green-dot matched-truth column.</p>
           </div>
         </div>
-      </section>
-
-      <!-- 6. LIVE -->
-      <section>
-        <h2>Live</h2>
-        <div class="center">
-          <img class="shot" src="scan-running.png" alt="Scan running — constellation pulsing, findings streaming" style="max-height: 600px;" />
-        </div>
-        <p class="small center" style="margin-top: 14px;">
-          15 nodes = 15 attack angles. Radius scales with finding count, color = max severity, pulse = newest finding.
+        <p class="small center" style="margin-top: 22px; font-size: 0.55em;">
+          Race-free: <span class="pill" style="font-size: 0.95em;">dedupStartedAt</span> guard inside <span class="pill" style="font-size: 0.95em;">bumpProgress</span> — atomic schedule, no double-fire.
         </p>
       </section>
 
-      <!-- 7. CLOSE -->
+      <!-- 6. LIVE — done-state hero -->
+      <section>
+        <h2 style="margin-bottom: 4px;">Live</h2>
+        <h3 style="margin-bottom: 8px;">Scan complete — top finding, sparkline, ranked table, benchmark</h3>
+        <div class="center" style="margin-top: 6px;">
+          <img class="shot" src="scan-done.png" alt="Scan done — top finding, sparkline, benchmark, ranked table" style="max-height: 480px; max-width: 80%;" />
+        </div>
+        <p class="small center" style="margin-top: 8px; font-size: 0.55em;">
+          Reveal sequence under 1.5s: settle → hero card → sparkline → table fade-in → severity wave.
+        </p>
+      </section>
+
+      <!-- 7. ROADMAP + CLOSE -->
       <section class="center">
-        <h2 style="text-align:center;">Why this wins</h2>
-        <div class="grid3" style="margin-top: 30px;">
+        <h2 style="text-align:center;">Why this wins · what's next</h2>
+        <div class="grid3" style="margin-top: 28px;">
           <div>
             <div class="stat">90s</div>
             <div class="stat-label">cold scan</div>
@@ -211,10 +201,30 @@ Browser ──WS── Convex ──schedule──> orchestrator (Node)
             <div class="stat-label">benchmarked, not vibes</div>
           </div>
         </div>
-        <p style="margin-top: 50px; font-size: 0.9em;">
-          Parallel agents <span class="arrow">→</span> deterministic dedup <span class="arrow">→</span> cached <span class="arrow">→</span> benchmarked <span class="arrow">→</span> patched.
+        <p style="margin-top: 36px; font-size: 0.85em;" class="center">
+          Parallel agents <span class="arrow">→</span> cached <span class="arrow">→</span> deterministic dedup <span class="arrow">→</span> benchmarked.
         </p>
-        <p class="small" style="margin-top: 60px;">github.com/&lt;you&gt;/hackathon · built on Convex + OpenAI · MIT</p>
+        <div class="grid2" style="margin-top: 28px; text-align: left;">
+          <div class="card">
+            <h3>Shipped this weekend</h3>
+            <ul style="margin: 0;">
+              <li>Cache + StatsBar</li>
+              <li>Dedup pipeline (Stage A + B)</li>
+              <li>Juice-shop eval + BenchmarkPanel</li>
+              <li>Constellation UI + reveal sequence</li>
+              <li>Octokit auth (lift GH rate limits)</li>
+            </ul>
+          </div>
+          <div class="card">
+            <h3>Next: Remediation Studio</h3>
+            <ul style="margin: 0;">
+              <li><strong>Explain</strong> — plain-English impact</li>
+              <li><strong>Prove</strong> — payload / curl / CVE</li>
+              <li><strong>Fix</strong> — unified diff PR mock</li>
+            </ul>
+            <p class="small" style="margin-top: 8px;">Schema + <span class="pill">clonedSha</span> landed. Drawer next.</p>
+          </div>
+        </div>
       </section>
 
     </div>
