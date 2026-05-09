@@ -1,3 +1,5 @@
+export const PROMPT_VER = "v1";
+
 export type Angle = {
   id: string;
   name: string;
