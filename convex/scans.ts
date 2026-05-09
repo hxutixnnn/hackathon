@@ -58,21 +58,32 @@ export const setClonedSha = internalMutation({
 });
 
 export const bumpProgress = internalMutation({
-  args: { scanId: v.id("scans") },
-  handler: async (ctx, { scanId }) => {
+  args: {
+    scanId: v.id("scans"),
+    cacheKind: v.optional(
+      v.union(v.literal("hit"), v.literal("miss")),
+    ),
+  },
+  handler: async (ctx, { scanId, cacheKind }) => {
     const scan = await ctx.db.get(scanId);
     if (!scan) return;
     const completed = scan.completedAgents + 1;
-    await ctx.db.patch(scanId, { completedAgents: completed });
+    // Single patch folds the per-agent counters together so 20 parallel auditors
+    // hit the scan doc once each instead of twice (cache bump + progress bump).
+    // Halves OCC contention on the scans row.
+    const patch: any = { completedAgents: completed };
+    if (cacheKind === "hit") patch.cacheHits = (scan.cacheHits ?? 0) + 1;
+    if (cacheKind === "miss") patch.cacheMisses = (scan.cacheMisses ?? 0) + 1;
     if (
       completed >= scan.totalAgents &&
       scan.totalAgents > 0 &&
       !scan.dedupStartedAt
     ) {
-      await ctx.db.patch(scanId, {
-        status: "reducing",
-        dedupStartedAt: Date.now(),
-      });
+      patch.status = "reducing";
+      patch.dedupStartedAt = Date.now();
+    }
+    await ctx.db.patch(scanId, patch);
+    if (patch.dedupStartedAt) {
       await ctx.scheduler.runAfter(0, internal.dedup.run, { scanId });
     }
   },

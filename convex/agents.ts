@@ -44,8 +44,7 @@ export const audit = internalAction({
           findings: cached,
         });
       }
-      await ctx.runMutation(internal.cache.bumpHit, { scanId });
-      await ctx.runMutation(internal.scans.bumpProgress, { scanId });
+      await ctx.runMutation(internal.scans.bumpProgress, { scanId, cacheKind: "hit" });
       return;
     }
 
@@ -83,7 +82,6 @@ export const audit = internalAction({
       promptVer: PROMPT_VER,
       findings: parsed.findings,
     });
-    await ctx.runMutation(internal.cache.bumpMiss, { scanId });
-    await ctx.runMutation(internal.scans.bumpProgress, { scanId });
+    await ctx.runMutation(internal.scans.bumpProgress, { scanId, cacheKind: "miss" });
   },
 });
