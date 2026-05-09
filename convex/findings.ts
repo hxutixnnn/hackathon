@@ -11,19 +11,6 @@ export const byScan = query({
   },
 });
 
-export const countsByAngle = query({
-  args: { scanId: v.id("scans") },
-  handler: async (ctx, { scanId }) => {
-    const rows = await ctx.db
-      .query("findings")
-      .withIndex("by_scan", (q) => q.eq("scanId", scanId))
-      .collect();
-    const counts: Record<string, number> = {};
-    for (const r of rows) counts[r.angle] = (counts[r.angle] ?? 0) + 1;
-    return counts;
-  },
-});
-
 export const angleSummaries = query({
   args: { scanId: v.id("scans") },
   handler: async (ctx, { scanId }) => {

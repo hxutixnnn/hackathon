@@ -1,9 +1,11 @@
 import { useParams } from "react-router-dom";
 import { useQuery } from "convex/react";
+import { motion } from "framer-motion";
 import { api } from "../../convex/_generated/api";
 import type { Id } from "../../convex/_generated/dataModel";
-import AngleGrid from "../components/AngleGrid";
+import Constellation, { type AngleSummary } from "../components/Constellation";
 import FindingsTable from "../components/FindingsTable";
+import { useActiveAngle } from "../lib/useActiveAngle";
 
 export default function Scan() {
   const { id } = useParams<{ id: string }>();
@@ -11,6 +13,8 @@ export default function Scan() {
 
   const scan = useQuery(api.scans.get, { scanId });
   const findings = useQuery(api.findings.byScan, { scanId });
+  const summaries = (useQuery(api.findings.angleSummaries, { scanId }) ?? []) as AngleSummary[];
+  const activeAngle = useActiveAngle(summaries);
 
   if (!scan) {
     return <div className="min-h-screen bg-slate-950 text-slate-100 p-8">Loading…</div>;
@@ -24,7 +28,13 @@ export default function Scan() {
   const ranked = scan.status === "done";
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 p-8">
+    <motion.div
+      className="min-h-screen bg-slate-950 text-slate-100 p-8"
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      transition={{ duration: 0.25 }}
+    >
       <div className="max-w-5xl mx-auto space-y-6">
         <div>
           <div className="text-sm text-slate-400 font-mono break-all">{scan.repoUrl}</div>
@@ -35,6 +45,15 @@ export default function Scan() {
           </div>
         </div>
 
+        <div className="bg-slate-950 border border-slate-900 rounded-xl p-4" style={{ height: 520 }}>
+          <Constellation
+            mode="live"
+            summaries={summaries}
+            centerLabel={`${scan.completedAgents} / ${scan.totalAgents || "?"}`}
+            activeAngle={activeAngle}
+          />
+        </div>
+
         <div>
           <div className="flex justify-between text-sm text-slate-400 mb-2">
             <span>Agents</span>
@@ -42,17 +61,12 @@ export default function Scan() {
               {scan.completedAgents} / {scan.totalAgents || "?"}
             </span>
           </div>
-          <div className="h-2 bg-slate-900 rounded-full overflow-hidden">
+          <div className="h-1 bg-slate-900 rounded-full overflow-hidden">
             <div
-              className="h-full bg-emerald-500 transition-all duration-500"
+              className="h-full bg-emerald-500 transition-all duration-1000 ease-out"
               style={{ width: `${pct}%` }}
             />
           </div>
-        </div>
-
-        <div>
-          <h2 className="text-sm uppercase tracking-wider text-slate-500 mb-3">Attack angles</h2>
-          <AngleGrid scanId={scanId} />
         </div>
 
         <div>
@@ -62,7 +76,7 @@ export default function Scan() {
           <FindingsTable findings={(findings ?? []) as any} ranked={ranked} />
         </div>
       </div>
-    </div>
+    </motion.div>
   );
 }
 
