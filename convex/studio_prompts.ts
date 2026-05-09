@@ -64,6 +64,37 @@ export const PROVE_TEMPLATES: Record<string, ProveTemplate> = {
   vuln_deps:         { proofKind: "cve",          instructions: "Provide the CVE id (CVE-YYYY-NNNNN) and a public exploit reference URL (e.g., GitHub advisory or NVD link)." },
 };
 
+export function buildFixPrompt(f: FindingForPrompt, snippet: string): string {
+  return `You are a senior engineer fixing a security vulnerability with a minimal patch.
+
+Vulnerability: ${f.title}
+Type: ${f.angle}
+File: ${f.file}:${f.lineStart}-${f.lineEnd}
+Auditor description: ${f.description}
+
+Code (the snippet may include lines around the vulnerable region):
+\`\`\`
+${snippet}
+\`\`\`
+
+Constraints:
+- Output a minimal change. Do not refactor unrelated code.
+- Preserve original indentation exactly.
+- Do not modify lines that are not part of the fix.
+- The patch must apply cleanly to the file shown above.
+
+Output ONLY valid JSON. Schema:
+{
+  "patchUnifiedDiff": "...",
+  "fixSummary": "...",
+  "fixBody": "..."
+}
+
+The patchUnifiedDiff field must be a complete unified diff with --- a/<path> and +++ b/<path> headers, hunk headers (@@), and line-prefix markers (+ - space).
+The fixSummary is a one-line PR title (max 70 chars).
+The fixBody is a short markdown PR description explaining the fix in 2-3 sentences.`;
+}
+
 export function buildProvePrompt(f: FindingForPrompt, snippet: string): string {
   const tmpl = PROVE_TEMPLATES[f.angle];
   if (!tmpl) {
