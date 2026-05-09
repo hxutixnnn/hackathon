@@ -59,7 +59,7 @@ export const applyReducer = internalMutation({
     ),
     discardedIds: v.array(v.string()),
   },
-  handler: async (ctx, { scanId, consolidated, discardedIds }) => {
+  handler: async (ctx, { consolidated, discardedIds }) => {
     for (const id of discardedIds) {
       try {
         await ctx.db.patch(id as any, { reducerKept: false });
