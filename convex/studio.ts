@@ -106,8 +106,8 @@ export const topThreeFindingIds = query({
       .withIndex("by_scan", (q) => q.eq("scanId", scanId))
       .collect();
     return rows
-      .filter((f) => f.reducerKept === true && f.reducerRank !== undefined)
-      .sort((a, b) => (a.reducerRank ?? 999) - (b.reducerRank ?? 999))
+      .filter((f) => f.reducerKept === true)
+      .sort((a, b) => b.severity - a.severity)
       .slice(0, 3)
       .map((f) => f._id);
   },
@@ -154,5 +154,20 @@ export const getRemediation = internalQuery({
       .query("remediations")
       .withIndex("by_finding_kind", (q) => q.eq("findingId", findingId).eq("kind", kind))
       .first();
+  },
+});
+
+export const topThreeFindingIdsInternal = internalQuery({
+  args: { scanId: v.id("scans") },
+  handler: async (ctx, { scanId }) => {
+    const rows = await ctx.db
+      .query("findings")
+      .withIndex("by_scan", (q) => q.eq("scanId", scanId))
+      .collect();
+    return rows
+      .filter((f) => f.reducerKept === true)
+      .sort((a, b) => b.severity - a.severity)
+      .slice(0, 3)
+      .map((f) => f._id);
   },
 });
